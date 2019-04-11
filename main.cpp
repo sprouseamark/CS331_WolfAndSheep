@@ -1,12 +1,17 @@
 #include <cstdio>
 #include "string.h"
+#include <iostream>
+#include <vector>
+
+using namespace std;
 
 enum Action {
-	moveLeft,
-	moveRight,
-	loadChicken,
-	loadWolf
+	moveLeft = 0,
+	moveRight = 1,
+	loadChicken = 2,
+	loadWolf = 3
 };
+
 
 struct State{
 public:
@@ -40,6 +45,11 @@ State initStateObj(){
 	return state;
 }
 
+void printStateToScreen(State state){
+	printf("%d,%d,%d\n%d,%d,%d\n\n", state.leftChickenCount, state.leftWolfCount, state.leftBoatCount,
+		state.rightChickenCount, state.rightWolfCount, state.rightBoatCount);
+}
+
 bool checkSameState(State state1, State state2){
 	if(state1.leftWolfCount != state2.leftWolfCount)
 		return false;
@@ -56,6 +66,14 @@ bool checkSameState(State state1, State state2){
 	return true;
 }
 
+bool checkInClosedSet(State state, vector<State> set){
+	for (int i = 0; i < set.size(); i ++){
+		if(checkSameState(state, set[i]))
+			return true;
+	}
+
+	return false;
+}
 
 bool checkValidArgs(char** argv){
 // Things ot check
@@ -80,7 +98,6 @@ State loadStateFromFile(char* stateFile){
 }
 
 
-//This piece needs some work
 bool checkValidAction(State state, Action action){
 	switch (action){
 		case moveLeft:
@@ -100,15 +117,12 @@ bool checkValidAction(State state, Action action){
 				if(state.leftChickenCount == 0){
 					return false;
 				}
-				if(state.leftChickenCount - 1 < state.leftWolfCount)
-					return false;
 			}
 			if(state.rightBoatCount == 1){
 				if (state.rightChickenCount == 0){
 					return false;
 				}
-				if (state.rightChickenCount -1 < state.rightWolfCount)
-					return false;
+
 			}
 			if(state.boatChickenCount + state.boatWolfCount == 2)
 				return false;
@@ -118,15 +132,11 @@ bool checkValidAction(State state, Action action){
 				if(state.leftWolfCount == 0){
 					return false;
 				}
-				if(state.boatWolfCount + state.rightWolfCount + 1 > state.rightChickenCount + state.boatChickenCount)
-					return false;
 			}
 			if(state.rightBoatCount == 1){
 				if(state.rightWolfCount == 0){
 					return false;
 				}
-				if(state.boatWolfCount + state.leftWolfCount + 1 > state.leftChickenCount + state.boatChickenCount)
-					return false;
 			}
 			if(state.boatChickenCount + state.boatWolfCount == 2)
 				return false;
@@ -138,8 +148,10 @@ bool checkValidAction(State state, Action action){
 }
 
 State applyAction(State state, Action action){
+	State returnState;
 	switch(action){
 		case moveLeft:
+			
 			state.leftBoatCount ++;
 			state.rightBoatCount --;
 			while (state.boatWolfCount != 0){
@@ -150,8 +162,10 @@ State applyAction(State state, Action action){
 				state.boatChickenCount --;
 				state.leftChickenCount ++;
 			}
-			return state;
+			returnState = state;
+			break;
 		case moveRight:
+		
 			state.leftBoatCount --;
 			state.rightBoatCount ++;
 			while (state.boatWolfCount != 0){
@@ -161,74 +175,100 @@ State applyAction(State state, Action action){
 			while (state.boatChickenCount != 0){
 				state.boatChickenCount --;
 				state.rightChickenCount ++;
+			returnState = state;
 			}
-			return state;
+			break;
 		case loadChicken:
 			if(state.leftBoatCount == 1)
 				state.leftChickenCount --;
 			else
 				state.rightChickenCount --;	
 			state.boatChickenCount ++;
-			return state;
+			returnState = state;
+			break;
 		case loadWolf:
 			if(state.leftBoatCount == 1)
 				state.leftWolfCount --;
 			else
 				state.rightWolfCount --;	
 			state.boatWolfCount ++;
-			return state;
+			returnState = state;
+			break;
 		default:
-			return state;
+			returnState = state;
+			break;
+
+		if(returnState.leftChickenCount < returnState.leftWolfCount || returnState.rightChickenCount < returnState.rightWolfCount)
+			returnState = initStateObj();
+
+		//printf("New state rightChickenCount: %d\n", returnState.rightChickenCount);
+
+		return returnState;
+
 	}
 }
 
+Node* getSingleStateSuccessor(State state, Action action){
+	if(checkValidAction(state, action)){
+		//cout << "moveLeft valid" << endl;
+		Node* successorNode = new Node();
+		successorNode->state = applyAction(state, action);
+		return successorNode;
+	}
+	else{
+		return NULL;
+	}
+}
 
 Node** getStateSuccessors(State state){
 	Node** successors = new Node*[4];
-	int successorCount = 0;
-	if(checkValidAction(state, moveLeft)){
-		Node* successorNode = new Node();
-		successorNode->state = applyAction(state, moveLeft);
-		successors[successorCount] = successorNode;
-		successorCount++;
-	}	
+	
+	successors[moveLeft] = getSingleStateSuccessor(state, moveLeft);
+	successors[moveRight] = getSingleStateSuccessor(state, moveRight);
+	successors[loadChicken] = getSingleStateSuccessor(state, loadChicken);
+	successors[loadWolf] = getSingleStateSuccessor(state, loadWolf);
 
-	if(checkValidAction(state, moveRight)){
-		Node* successorNode = new Node();
-		successorNode->state = applyAction(state, moveRight);
-		successors[successorCount] = successorNode;
-		successorCount++;
-	}	
-	if(checkValidAction(state, loadChicken)){
-		Node* successorNode = new Node();
-		successorNode->state = applyAction(state, loadChicken);
-		successors[successorCount] = successorNode;
-		successorCount++;
-	}	
-	if(checkValidAction(state, loadWolf)){
-		Node* successorNode = new Node();
-		successorNode->state = applyAction(state, loadWolf);
-		successors[successorCount] = successorNode;
-		successorCount++;
-	}	
-	printf("PrintCount: %d\n", successorCount);
+	return successors;
+
 }
 
-void executeDepthSearch(Node* node, State goalState){
+vector<State> executeDepthSearch(Node* node, State goalState, vector<State>* visitedStates, vector<State> path){
+	vector<State> emptySet;
 	if(checkSameState(node->state,goalState)){
+		path.push_back(node->state);
 		//Solution found, return path
-		printf("Solution found");
+		return path;
 	}
-	node->successors = getStateSuccessors(node->state);
-	printf("Size pieces are:\n ObjectSize: %li\n ReturnSize: %li\n", sizeof(Node**), sizeof(node->successors));
+	else if (checkInClosedSet(node->state, *visitedStates)){
+		return emptySet;
+	}
+	else{
+		visitedStates->push_back(node->state);
+		path.push_back(node->state);
+		node->successors = getStateSuccessors(node->state);
+		for (int i = 0; i < 4; i++){
+			if(node->successors[i] != NULL)
+			{
+				vector<State> result = executeDepthSearch(node->successors[i], goalState, visitedStates, path);
+				if(!result.empty())
+					return result;
+			}
+		}
+		return emptySet;
+		//printf("Size pieces are:\n ObjectSize: %li\n ReturnSize: %li\n", sizeof(Node**), sizeof(node->successors));
+	}
 }
 
 
 	
 void findSolution(Node* solutionTree, State goalState, char* searchMode){
 
+	vector<State> emptySet;
 	//Perform search depending on what mode is selected
-	executeDepthSearch(solutionTree, goalState);
+	vector<State> solutionPath = executeDepthSearch(solutionTree, goalState, new vector<State>, emptySet);
+	for(int i = 0; i < solutionPath.size(); i ++){
+		printStateToScreen(solutionPath[i]);
+	}
 
 }
 
@@ -257,7 +297,10 @@ int main(int args, char** argv){
 	}
 
 	State initialState = loadStateFromFile(argv[1]);
-	State goalState = loadStateFromFile(argv[2]);
+	State goalState = initStateObj();
+	goalState.leftChickenCount = 3;
+	goalState.leftWolfCount = 3;
+	goalState.leftBoatCount = 1;
 	SolutionTree->state = initialState;
 
 	findSolution(SolutionTree, goalState, argv[3]);
