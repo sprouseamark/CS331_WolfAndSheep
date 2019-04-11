@@ -5,11 +5,16 @@
 
 using namespace std;
 
+#define ACTIONCOUNT 7
+
 enum Action {
 	moveLeft = 0,
 	moveRight = 1,
 	loadChicken = 2,
-	loadWolf = 3
+	loadDoubleChicken = 3,
+	loadWolf = 4,
+	loadChickenWolf = 5,
+	loadDoubleWolf = 6
 };
 
 
@@ -124,7 +129,22 @@ bool checkValidAction(State state, Action action){
 				}
 
 			}
-			if(state.boatChickenCount + state.boatWolfCount == 2)
+			if(state.boatChickenCount + state.boatWolfCount > 0)
+				return false;
+			return true;
+		case loadDoubleChicken:
+			if(state.leftBoatCount == 1){
+				if(state.leftChickenCount < 2){
+					return false;
+				}
+			}
+			if(state.rightBoatCount == 1){
+				if (state.rightChickenCount < 2){
+					return false;
+				}
+
+			}
+			if(state.boatChickenCount + state.boatWolfCount > 0)
 				return false;
 			return true;
 		case loadWolf:
@@ -138,10 +158,39 @@ bool checkValidAction(State state, Action action){
 					return false;
 				}
 			}
-			if(state.boatChickenCount + state.boatWolfCount == 2)
+			if(state.boatChickenCount + state.boatWolfCount > 0)
 				return false;
 			return true;
+		case loadChickenWolf:
+			if(state.leftBoatCount == 1){
+				if(state.leftChickenCount == 0 || state.leftWolfCount == 0){
+					return false;
+				}
+			}
+			if(state.rightBoatCount == 1){
+				if (state.rightChickenCount == 0 || state.rightWolfCount == 0){
+					return false;
+				}
 
+			}
+			if(state.boatChickenCount + state.boatWolfCount > 0)
+				return false;
+			return true;
+		case loadDoubleWolf:
+			if(state.leftBoatCount == 1){
+				if(state.leftWolfCount < 2){
+					return false;
+				}
+			}
+			if(state.rightBoatCount == 1){
+				if (state.rightWolfCount < 2){
+					return false;
+				}
+
+			}
+			if(state.boatChickenCount + state.boatWolfCount > 0)
+				return false;
+			return true;
 			
 	}
 	return true;
@@ -165,7 +214,6 @@ State applyAction(State state, Action action){
 			returnState = state;
 			break;
 		case moveRight:
-		
 			state.leftBoatCount --;
 			state.rightBoatCount ++;
 			while (state.boatWolfCount != 0){
@@ -186,12 +234,41 @@ State applyAction(State state, Action action){
 			state.boatChickenCount ++;
 			returnState = state;
 			break;
+		case loadDoubleChicken:
+			if(state.leftBoatCount == 1)
+				state.leftChickenCount -= 2;
+			else
+				state.rightChickenCount -= 2;	
+			state.boatChickenCount += 2;
+			returnState = state;
+			break;
 		case loadWolf:
 			if(state.leftBoatCount == 1)
 				state.leftWolfCount --;
 			else
 				state.rightWolfCount --;	
 			state.boatWolfCount ++;
+			returnState = state;
+			break;
+		case loadDoubleWolf:
+			if(state.leftBoatCount == 1)
+				state.leftWolfCount -= 2;
+			else
+				state.rightWolfCount -= 2;	
+			state.boatWolfCount += 2;
+			returnState = state;
+			break;
+		case loadChickenWolf:
+			if(state.leftBoatCount == 1){
+				state.leftWolfCount --;
+				state.leftChickenCount --;
+			}
+			else{
+				state.rightWolfCount --;
+				state.rightChickenCount --;
+			}
+			state.boatWolfCount ++;
+			state.boatChickenCount ++;
 			returnState = state;
 			break;
 		default:
@@ -221,12 +298,15 @@ Node* getSingleStateSuccessor(State state, Action action){
 }
 
 Node** getStateSuccessors(State state){
-	Node** successors = new Node*[4];
+	Node** successors = new Node*[ACTIONCOUNT];
 	
 	successors[moveLeft] = getSingleStateSuccessor(state, moveLeft);
 	successors[moveRight] = getSingleStateSuccessor(state, moveRight);
 	successors[loadChicken] = getSingleStateSuccessor(state, loadChicken);
 	successors[loadWolf] = getSingleStateSuccessor(state, loadWolf);
+	successors[loadDoubleChicken] = getSingleStateSuccessor(state, loadDoubleChicken);
+	successors[loadDoubleWolf] = getSingleStateSuccessor(state, loadDoubleWolf);
+	successors[loadChickenWolf] = getSingleStateSuccessor(state, loadChickenWolf);
 
 	return successors;
 
@@ -246,7 +326,7 @@ vector<State> executeDepthSearch(Node* node, State goalState, vector<State>* vis
 		visitedStates->push_back(node->state);
 		path.push_back(node->state);
 		node->successors = getStateSuccessors(node->state);
-		for (int i = 0; i < 4; i++){
+		for (int i = 0; i < ACTIONCOUNT; i++){
 			if(node->successors[i] != NULL)
 			{
 				vector<State> result = executeDepthSearch(node->successors[i], goalState, visitedStates, path);
