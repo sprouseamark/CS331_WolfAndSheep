@@ -312,7 +312,7 @@ Node** getStateSuccessors(State state){
 
 }
 
-vector<State> executeDepthSearch(Node* node, State goalState, vector<State>* visitedStates, vector<State> path){
+vector<State> executeDepthSearch(Node* node, State goalState, vector<State>* visitedStates, vector<State> path, int* nodeCount){
 	vector<State> emptySet;
 	if(checkSameState(node->state,goalState)){
 		path.push_back(node->state);
@@ -323,13 +323,14 @@ vector<State> executeDepthSearch(Node* node, State goalState, vector<State>* vis
 		return emptySet;
 	}
 	else{
+		*nodeCount += 1;
 		visitedStates->push_back(node->state);
 		path.push_back(node->state);
 		node->successors = getStateSuccessors(node->state);
 		for (int i = 0; i < ACTIONCOUNT; i++){
 			if(node->successors[i] != NULL)
 			{
-				vector<State> result = executeDepthSearch(node->successors[i], goalState, visitedStates, path);
+				vector<State> result = executeDepthSearch(node->successors[i], goalState, visitedStates, path, nodeCount);
 				if(!result.empty())
 					return result;
 			}
@@ -339,16 +340,75 @@ vector<State> executeDepthSearch(Node* node, State goalState, vector<State>* vis
 	}
 }
 
+vector<State> executeLimitedDepthSearch(Node* node, State goalState, vector<State>* visitedStates, int limit, vector<State> path, int* nodeCount) {
+	vector<State> emptySet;
+	if (checkSameState(node->state, goalState)) {
+		path.push_back(node->state);
+		//Solution found, return path
+		return path;
+	}
+	else if (checkInClosedSet(node->state, *visitedStates)) {
+		return emptySet;
+	}
+	else if (limit > 0) {
+		*nodeCount += 1;
+		visitedStates->push_back(node->state);
+		path.push_back(node->state);
+		node->successors = getStateSuccessors(node->state);
+		//cout << "Expanding node number: " << *nodeCount << endl;
+		for (int i = 0; i < ACTIONCOUNT; i++) {
+			if (node->successors[i] != NULL)
+			{
+				vector<State> result = executeLimitedDepthSearch(node->successors[i], goalState, visitedStates, limit-1, path, nodeCount);
+				if (!result.empty())
+					return result;
+			}
+		}
+		return emptySet;
+		//printf("Size pieces are:\n ObjectSize: %li\n ReturnSize: %li\n", sizeof(Node**), sizeof(node->successors));
+	}
+	else {
+		return emptySet;
+	}
+}
 
+vector<State> executeIterativeDepthSearch(Node* node, State goalState, vector<State> path, int* nodeCount) {
+	vector<State> solution;
+	int limitCount = 0;
+	while (solution.empty()) {
+		solution = executeLimitedDepthSearch(node, goalState, new vector<State>(), limitCount, path, nodeCount);
+		limitCount++;
+	}
+	return solution;
+}
 	
 void findSolution(Node* solutionTree, State goalState, char* searchMode){
 
 	vector<State> emptySet;
+	int* nodesExpanded = new int(0);
+	vector<State> solutionPath;
 	//Perform search depending on what mode is selected
-	vector<State> solutionPath = executeDepthSearch(solutionTree, goalState, new vector<State>, emptySet);
-	for(int i = 0; i < solutionPath.size(); i ++){
-		printStateToScreen(solutionPath[i]);
+	if (strcmp(searchMode, "bfs") == 0) {
+
 	}
+	else if (strcmp(searchMode, "dfs") == 0) {
+		solutionPath = executeDepthSearch(solutionTree, goalState, new vector<State>, emptySet, nodesExpanded);
+		for (int i = 0; i < solutionPath.size(); i++) {
+			printStateToScreen(solutionPath[i]);
+		}
+	}
+	else if (strcmp(searchMode, "iddfs") == 0) {
+		cout << "here" << endl;
+		solutionPath = executeIterativeDepthSearch(solutionTree, goalState, emptySet, nodesExpanded);
+		for (int i = 0; i < solutionPath.size(); i++) {
+			printStateToScreen(solutionPath[i]);
+		}
+	}
+	else if (strcmp(searchMode, "astar") == 0) {
+
+	}
+
+	printf("Nodes expanded: %d\n", *nodesExpanded);
 
 }
 
