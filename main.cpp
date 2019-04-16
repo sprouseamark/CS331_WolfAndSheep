@@ -5,6 +5,8 @@
 #include <fstream>
 #include <sstream>
 #include <ostream>
+#include <string>
+#include <stdlib.h>
 
 using namespace std;
 
@@ -55,10 +57,8 @@ State initStateObj(){
 
 char* stateToString(State state){
 	char* output = new char[100];
-	cout <<"hey there" << endl;
 	sprintf(output, "%d,%d,%d\n%d,%d,%d\n\n", state.leftChickenCount, state.leftWolfCount, state.leftBoatCount,
 		state.rightChickenCount, state.rightWolfCount, state.rightBoatCount);
-	cout << "greetings" << endl;
 	return output;
 }
 
@@ -78,9 +78,9 @@ bool checkSameState(State state1, State state2){
 	return true;
 }
 
-bool checkInClosedSet(State state, vector<State> set){
-	for (int i = 0; i < set.size(); i ++){
-		if(checkSameState(state, set[i]))
+bool checkInClosedSet(State state, vector<State>* set){
+	for (int i = 0; i < set->size(); i ++){
+		if(checkSameState(state, (*set)[i]))
 			return true;
 	}
 
@@ -99,7 +99,7 @@ bool checkValidArgs(char** argv){
 State loadStateFromFile(char *stateFile)
 {
 	cout << "READING FILE " << stateFile << endl;
-	vector<vector<string>> stateVals;
+	vector<vector<string> > stateVals;
 	State state = initStateObj();
 	ifstream infile(stateFile);
 	vector<string> lineVals;
@@ -381,37 +381,40 @@ Node **getStateSuccessors(State state)
 vector<State> executeDepthSearch(Node *node, State goalState, vector<State> *visitedStates, vector<State> path, int *nodeCount)
 {
 	vector<State> emptySet;
-	if (checkSameState(node->state, goalState))
+	State nodeState = node->state;
+	delete node;
+
+	if (checkSameState(nodeState, goalState))
 	{
-		path.push_back(node->state);
-		delete node;
+		path.push_back(nodeState);
 		//Solution found, return path
 		return path;
 	}
-	else if (checkInClosedSet(node->state, *visitedStates))
+	else if (checkInClosedSet(nodeState, visitedStates))
 	{
-		delete node;
 		return emptySet;
 	}
 	else
 	{
 		*nodeCount += 1;
-		visitedStates->push_back(node->state);
-		path.push_back(node->state);
-		node->successors = getStateSuccessors(node->state);
+		visitedStates->push_back(nodeState);
+		path.push_back(nodeState);
+		//node->successors = getStateSuccessors(node->state);
+		Node **successors = new Node *[ACTIONCOUNT];
+
 		for (int i = 0; i < ACTIONCOUNT; i++)
 		{
-			if (node->successors[i] != NULL)
+			successors[i] = getSingleStateSuccessor(nodeState, static_cast<Action>(i));
+			if (successors[i] != NULL)
 			{
-				vector<State> result = executeDepthSearch(node->successors[i], goalState, visitedStates, path, nodeCount);
+				vector<State> result = executeDepthSearch(successors[i], goalState, visitedStates, path, nodeCount);
 				if (!result.empty())
 				{
-					delete [] node->successors;
+					delete [] successors;
 					return result;
 				}
 			}
 		}
-		delete node;
 		return emptySet;
 		//printf("Size pieces are:\n ObjectSize: %li\n ReturnSize: %li\n", sizeof(Node**), sizeof(node->successors));
 	}
@@ -420,30 +423,37 @@ vector<State> executeDepthSearch(Node *node, State goalState, vector<State> *vis
 vector<State> executeLimitedDepthSearch(Node *node, State goalState, vector<State> *visitedStates, int limit, vector<State> path, int *nodeCount)
 {
 	vector<State> emptySet;
+	State nodeState = node->state;
+
 	if (checkSameState(node->state, goalState))
 	{
 		path.push_back(node->state);
 		//Solution found, return path
 		return path;
 	}
-	else if (checkInClosedSet(node->state, *visitedStates))
+	else if (checkInClosedSet(node->state, visitedStates))
 	{
 		return emptySet;
 	}
 	else if (limit > 0)
 	{
 		*nodeCount += 1;
-		visitedStates->push_back(node->state);
-		path.push_back(node->state);
-		node->successors = getStateSuccessors(node->state);
-		//cout << "Expanding node number: " << *nodeCount << endl;
+		visitedStates->push_back(nodeState);
+		path.push_back(nodeState);
+		//node->successors = getStateSuccessors(node->state);
+		Node **successors = new Node *[ACTIONCOUNT];
+
 		for (int i = 0; i < ACTIONCOUNT; i++)
 		{
-			if (node->successors[i] != NULL)
+			successors[i] = getSingleStateSuccessor(nodeState, static_cast<Action>(i));
+			if (successors[i] != NULL)
 			{
-				vector<State> result = executeLimitedDepthSearch(node->successors[i], goalState, visitedStates, limit - 1, path, nodeCount);
+				vector<State> result = executeDepthSearch(successors[i], goalState, visitedStates, path, nodeCount);
 				if (!result.empty())
+				{
+					delete [] successors;
 					return result;
+				}
 			}
 		}
 		return emptySet;
@@ -498,7 +508,6 @@ void findSolution(Node *solutionTree, State goalState, char *searchMode, char *o
 		solutionPath = executeDepthSearch(solutionTree, goalState, new vector<State>, emptySet, nodesExpanded);
 		for (int i = 0; i < solutionPath.size(); i++)
 		{
-			cout << "HELLO" << endl;
 			char *string = stateToString(solutionPath[i]);
 			cout << string << endl;
 			delete[] string;
@@ -506,7 +515,6 @@ void findSolution(Node *solutionTree, State goalState, char *searchMode, char *o
 	}
 	else if (strcmp(searchMode, "iddfs") == 0)
 	{
-		cout << "here" << endl;
 		solutionPath = executeIterativeDepthSearch(solutionTree, goalState, emptySet, nodesExpanded);
 		for (int i = 0; i < solutionPath.size(); i++)
 		{
@@ -542,10 +550,7 @@ int main(int args, char **argv)
 	}
 
 	State initialState = loadStateFromFile(argv[1]);
-	State goalState = initStateObj();
-	goalState.leftChickenCount = 3;
-	goalState.leftWolfCount = 3;
-	goalState.leftBoatCount = 1;
+	State goalState = loadStateFromFile(argv[2]);
 	SolutionTree->state = initialState;
 
 	findSolution(SolutionTree, goalState, argv[3], argv[4]);
