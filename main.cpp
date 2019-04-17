@@ -378,6 +378,66 @@ Node **getStateSuccessors(State state)
 	return successors;
 }
 
+vector<State> executeBreadthSearch(Node *node, State goalState, int *nodeCount) 
+{
+	vector<State> visitedStates, frontier, path, emptySet;
+	State initialNodeState = node->state;
+	frontier.push_back(node->state);
+	Node currentNode;
+
+
+	if (checkSameState(initialNodeState, goalState))
+	{
+		path.push_back(initialNodeState);
+		//Solution found, return path
+		return path;
+	}
+	else if (checkInClosedSet(initialNodeState, &visitedStates))
+	{
+		return emptySet;
+	}
+	else
+	{
+		while (true)
+		{
+			if (frontier.empty())
+				return emptySet;
+			currentNode.state = frontier.front();
+			frontier.erase(frontier.begin());
+			visitedStates.push_back(currentNode.state);
+
+			Node **successors = new Node *[ACTIONCOUNT];
+
+			for (int i = 0; i < ACTIONCOUNT; i++)
+			{
+				
+				successors[i] = getSingleStateSuccessor(currentNode.state, static_cast<Action>(i));
+				if (successors[i] != NULL)
+				{
+					if (!checkInClosedSet(successors[i]->state, &visitedStates) && !checkInClosedSet(successors[i]->state, &frontier))
+					{
+						if (checkSameState(successors[i]->state, goalState))
+						{
+							path.push_back(initialNodeState);
+							//Solution found, return path
+							return path;
+						}
+						else
+						{
+							frontier.push_back(successors[i]->state);
+						}
+					}
+
+					delete successors[i];
+				}
+			}
+
+			delete[] successors;
+
+		}
+	}
+}
+
 vector<State> executeDepthSearch(Node *node, State goalState, vector<State> *visitedStates, vector<State> path, int *nodeCount)
 {
 	vector<State> emptySet;
@@ -502,6 +562,13 @@ void findSolution(Node *solutionTree, State goalState, char *searchMode, char *o
 	//Perform search depending on what mode is selected
 	if (strcmp(searchMode, "bfs") == 0)
 	{
+		solutionPath = executeBreadthSearch(solutionTree, goalState, nodesExpanded);
+		for (int i = 0; i < solutionPath.size(); i++)
+		{
+			char *string = stateToString(solutionPath[i]);
+			cout << string << endl;
+			delete[] string;
+		}
 	}
 	else if (strcmp(searchMode, "dfs") == 0)
 	{
