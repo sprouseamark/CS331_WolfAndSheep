@@ -7,6 +7,7 @@
 #include <ostream>
 #include <string>
 #include <stdlib.h>
+#include <queue>
 
 using namespace std;
 
@@ -21,6 +22,8 @@ enum Action {
 	loadChickenWolf = 5,
 	loadDoubleWolf = 6
 };
+
+
 
 
 struct State{
@@ -40,7 +43,18 @@ public:
 	State state;
 	Node* parent;
 	Node** successors;
-}; 
+	int depth;
+	int sortValue;
+};
+
+struct aStarCompareDistance{
+	bool operator()(Node* const& node1, Node* const& node2)
+	{
+		//cout << "Comparing node with value " << node1->sortValue << " and " << node2->sortValue << endl;
+		return node1->sortValue < node2->sortValue;
+		
+	}
+};
 
 State initStateObj(){
 	State state;
@@ -54,6 +68,14 @@ State initStateObj(){
 	state.boatChickenCount = 0;
 
 	return state;
+}
+
+void assignDepth(Node* node)
+{
+	if(node->parent == NULL)
+		node->depth = 0;
+	else
+		node->depth = node->parent->depth + 1;
 }
 
 vector<State> traceParentPath (Node* goalNode){
@@ -93,6 +115,31 @@ bool checkSameState(State state1, State state2){
 		return false;
 	return true;
 }
+
+template<
+    class T,
+    class Container = std::vector<T>,
+    class Compare = std::less<typename Container::value_type>
+> class MyQueue : public std::priority_queue<T, Container, Compare>
+{
+	public:
+		typedef typename
+        std::priority_queue<
+        T,
+        Container,
+        Compare>::container_type::const_iterator const_iterator;
+
+    bool find(const T&val) const
+    {
+        auto first = this->c.cbegin();
+        auto last = this->c.cend();
+        while (first!=last) {
+            if (checkSameState((*first)->state, val->state)) return true;
+            ++first;
+        }
+        return false;
+    }
+};
 
 bool checkInClosedSet(State state, vector<State>* set){
 	for (int i = 0; i < set->size(); i ++){
@@ -279,6 +326,7 @@ bool checkValidAction(State state, Action action)
 
 State applyAction(State state, Action action)
 {
+ cout << "Parent stat: " << endl << stateToString(state) << endl;
 	State returnState;
 	switch (action)
 	{
@@ -364,9 +412,10 @@ State applyAction(State state, Action action)
 		returnState = state;
 		break;
 
-		if (returnState.leftChickenCount < returnState.leftWolfCount || returnState.rightChickenCount < returnState.rightWolfCount)
+		if (returnState.leftChickenCount < returnState.leftWolfCount || returnState.rightChickenCount < returnState.rightWolfCount){
 			returnState = initStateObj();
-
+			cout << "here" << endl;
+		}
 		//printf("New state rightChickenCount: %d\n", returnState.rightChickenCount);
 
 		return returnState;
@@ -380,6 +429,7 @@ Node *getSingleStateSuccessor(State state, Action action)
 		//cout << "moveLeft valid" << endl;
 		Node *successorNode = new Node();
 		successorNode->state = applyAction(state, action);
+		cout << "Got new successor: " << stateToString(successorNode->state) << endl;
 		return successorNode;
 	}
 	else
@@ -427,6 +477,7 @@ vector<State> executeBreadthSearch(Node *node, State goalState, int *nodeCount)
 		{
 			if (frontier.empty())
 				return emptySet;
+
 			currentNode = frontier.front();
 			frontier.erase(frontier.begin());
 			visitedStates.push_back(currentNode->state);
@@ -562,6 +613,96 @@ vector<State> executeIterativeDepthSearch(Node *node, State goalState, vector<St
 	return solution;
 }
 
+int aStarHeuristic(State state, State goalState)
+{
+	int sum = 0;
+	//cout << "Left boat count " << state.leftBoatCount << endl;
+	//cout << "Left goal boat count " << goalState.leftBoatCount << endl;
+	//sum += abs(state.leftBoatCount - goalState.leftBoatCount);
+	/*sum += abs(state.leftChickenCount - goalState.leftChickenCount);
+	sum += abs(state.leftWolfCount - goalState.leftWolfCount);
+	sum += abs(state.rightBoatCount - goalState.rightBoatCount);
+	sum += abs(state.rightChickenCount - goalState.rightChickenCount);
+	sum += abs(state.rightWolfCount - goalState.rightWolfCount);*/
+
+	cout << sum << endl;
+
+	return sum;
+}
+
+bool checkIfInPriorityQueue(MyQueue<Node*,vector<Node*>,aStarCompareDistance> frontierQ, Node* node){
+			
+		return frontierQ.find(node);
+}
+
+vector<State> executeAStarSearch(Node *node, State goalState, int *nodeCount) 
+{
+	vector<State> visitedStates, emptySet;
+	MyQueue<Node*, vector<Node*>, aStarCompareDistance> frontierQ;
+	State initialNodeState = node->state;
+	node->parent = NULL;
+	node->sortValue = aStarHeuristic(node->state, goalState);
+	//visitedStates.push_back(node->state);
+	frontierQ.push(node);
+	Node* currentNode;
+
+
+	if (checkSameState(initialNodeState, goalState))
+	{
+		return traceParentPath(node);
+	}
+	else if (checkInClosedSet(initialNodeState, &visitedStates))
+	{
+
+		return emptySet;
+	}
+	else
+	{
+		while (true)
+		{
+			if (frontierQ.empty())
+			{
+				cout << "q is empty" << endl;
+				return emptySet;
+			}
+			/*else{
+				cout << "Current Frontier Size: " << frontierQ.size() << endl;
+			}*/
+			currentNode = frontierQ.top();
+			frontierQ.pop();
+
+			currentNode->sortValue = aStarHeuristic(currentNode->state, goalState);
+
+			Node **successors = new Node *[ACTIONCOUNT];
+
+			for (int i = 0; i < ACTIONCOUNT; i++)
+			{
+				
+				successors[i] = getSingleStateSuccessor(currentNode->state, static_cast<Action>(i));
+				if (successors[i] != NULL)
+				{
+					successors[i]->parent = currentNode;
+					visitedStates.push_back(currentNode->state);
+					//cout << stateToString(successors[i]->state) << endl;
+					cout << "HELLOTHERE" << endl;
+					if (!checkInClosedSet(successors[i]->state, &visitedStates) && !checkIfInPriorityQueue(frontierQ, successors[i]))
+					{
+						if (checkSameState(successors[i]->state, goalState))
+						{
+							cout << "Solution found" << endl;
+							return traceParentPath(successors[i]);
+						}
+						else
+						{
+							frontierQ.push(successors[i]);
+						}
+					}
+				}
+			}
+		}
+	}
+}
+
 void writeSolutionToOutput(vector<State> solutionPath, int *nodesExpanded, char *outputFile)
 {
 	ofstream openfile(outputFile);
@@ -617,6 +758,13 @@ void findSolution(Node *solutionTree, State goalState, char *searchMode, char *o
 	}
 	else if (strcmp(searchMode, "astar") == 0)
 	{
+		solutionPath = executeAStarSearch(solutionTree, goalState, nodesExpanded);
+		for (int i = 0; i < solutionPath.size(); i++)
+		{
+			char *string = stateToString(solutionPath[i]);
+			cout << string << endl;
+			delete[] string;
+		}
 	}
 	writeSolutionToOutput(solutionPath, nodesExpanded, outputFile);
 
@@ -646,6 +794,7 @@ int main(int args, char **argv)
 	SolutionTree->state = initialState;
 
 	findSolution(SolutionTree, goalState, argv[3], argv[4]);
+	cout << "it finished" << endl;
 
 	return 0;
 }
