@@ -38,6 +38,7 @@ public:
 struct Node{
 public:
 	State state;
+	Node* parent;
 	Node** successors;
 }; 
 
@@ -54,6 +55,21 @@ State initStateObj(){
 
 	return state;
 }
+
+vector<State> traceParentPath (Node* goalNode){
+	vector<State> output;
+	Node* currentNode = goalNode;
+	while(currentNode->parent != NULL)
+	{
+	State temp = currentNode->parent->state;
+		output.push_back(currentNode->parent->state);
+		//printf("Right:%d,%d,%d\nLeft:%d,%d,%d\n\n",
+		//	temp.rightChickenCount, temp.rightWolfCount, temp.rightBoatCount,
+		//	temp.leftChickenCount, temp.leftWolfCount, temp.leftBoatCount);
+		currentNode = currentNode->parent;
+	}
+	return output;
+} 
 
 char* stateToString(State state){
 	char* output = new char[100];
@@ -81,6 +97,15 @@ bool checkSameState(State state1, State state2){
 bool checkInClosedSet(State state, vector<State>* set){
 	for (int i = 0; i < set->size(); i ++){
 		if(checkSameState(state, (*set)[i]))
+			return true;
+	}
+
+	return false;
+}
+
+bool checkInClosedSet(State state, vector<Node*>* set){
+	for (int i = 0; i < set->size(); i ++){
+		if(checkSameState(state, (*set)[i]->state))
 			return true;
 	}
 
@@ -380,17 +405,17 @@ Node **getStateSuccessors(State state)
 
 vector<State> executeBreadthSearch(Node *node, State goalState, int *nodeCount) 
 {
-	vector<State> visitedStates, frontier, path, emptySet;
+	vector<State> visitedStates, emptySet;
+	vector<Node*> frontier;
 	State initialNodeState = node->state;
-	frontier.push_back(node->state);
-	Node currentNode;
+	node->parent = NULL;
+	frontier.push_back(node);
+	Node* currentNode;
 
 
 	if (checkSameState(initialNodeState, goalState))
 	{
-		path.push_back(initialNodeState);
-		//Solution found, return path
-		return path;
+		return traceParentPath(node);
 	}
 	else if (checkInClosedSet(initialNodeState, &visitedStates))
 	{
@@ -402,37 +427,37 @@ vector<State> executeBreadthSearch(Node *node, State goalState, int *nodeCount)
 		{
 			if (frontier.empty())
 				return emptySet;
-			currentNode.state = frontier.front();
+			currentNode = frontier.front();
 			frontier.erase(frontier.begin());
-			visitedStates.push_back(currentNode.state);
+			visitedStates.push_back(currentNode->state);
 
 			Node **successors = new Node *[ACTIONCOUNT];
 
 			for (int i = 0; i < ACTIONCOUNT; i++)
 			{
 				
-				successors[i] = getSingleStateSuccessor(currentNode.state, static_cast<Action>(i));
+				successors[i] = getSingleStateSuccessor(currentNode->state, static_cast<Action>(i));
 				if (successors[i] != NULL)
 				{
+					successors[i]->parent = currentNode;
 					if (!checkInClosedSet(successors[i]->state, &visitedStates) && !checkInClosedSet(successors[i]->state, &frontier))
 					{
 						if (checkSameState(successors[i]->state, goalState))
 						{
-							path.push_back(initialNodeState);
-							//Solution found, return path
-							return path;
+							
+							return traceParentPath(successors[i]);
 						}
 						else
 						{
-							frontier.push_back(successors[i]->state);
+							frontier.push_back(successors[i]);
 						}
 					}
 
-					delete successors[i];
+					//delete successors[i];
 				}
 			}
 
-			delete[] successors;
+			//delete[] successors;
 
 		}
 	}
