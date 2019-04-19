@@ -8,10 +8,12 @@
 #include <string>
 #include <stdlib.h>
 #include <queue>
+#include <algorithm>
 
 using namespace std;
 
 #define ACTIONCOUNT 7
+#define LIMITMAX 10000000
 
 enum Action {
 	moveLeft = 0,
@@ -81,10 +83,11 @@ void assignDepth(Node* node)
 vector<State> traceParentPath (Node* goalNode){
 	vector<State> output;
 	Node* currentNode = goalNode;
+	output.push_back(goalNode->state);
 	while(currentNode->parent != NULL)
 	{
-	State temp = currentNode->parent->state;
-		output.push_back(currentNode->parent->state);
+		State temp = currentNode->parent->state;
+		output.insert(output.begin(),currentNode->parent->state);
 		//printf("Right:%d,%d,%d\nLeft:%d,%d,%d\n\n",
 		//	temp.rightChickenCount, temp.rightWolfCount, temp.rightBoatCount,
 		//	temp.leftChickenCount, temp.leftWolfCount, temp.leftBoatCount);
@@ -468,14 +471,14 @@ vector<State> executeBreadthSearch(Node *node, State goalState, int *nodeCount)
 
 	if (checkSameState(initialNodeState, goalState))
 	{
-		return traceParentPath(node);
+		vector<State> solutionPath = traceParentPath(node);
+		return solutionPath;
 	}
 	else
 	{
 		while (true)
 		{
 			//cout << "Frontier size: " << frontier.size() << endl;
-			cout << "Visited States size: " << visitedStates.size() << endl;
 			if (frontier.empty())
 			{
 				return emptySet;
@@ -484,6 +487,8 @@ vector<State> executeBreadthSearch(Node *node, State goalState, int *nodeCount)
 			currentNode = frontier.front();
 			frontier.erase(frontier.begin());
 			visitedStates.push_back(currentNode->state);
+
+			*nodeCount = *nodeCount + 1;
 
 			Node **successors = new Node *[ACTIONCOUNT];
 
@@ -498,7 +503,8 @@ vector<State> executeBreadthSearch(Node *node, State goalState, int *nodeCount)
 						if (checkSameState(successors[i]->state, goalState))
 						{
 							cout << "Solution found" << endl;
-							return traceParentPath(successors[i]);
+							vector<State> solutionPath = traceParentPath(successors[i]);
+							return solutionPath;
 						}
 						else
 						{
@@ -581,14 +587,15 @@ vector<State> executeLimitedDepthSearch(Node *node, State goalState, vector<Stat
 			successors[i] = getSingleStateSuccessor(nodeState, static_cast<Action>(i));
 			if (successors[i] != NULL)
 			{
-				vector<State> result = executeDepthSearch(successors[i], goalState, visitedStates, path, nodeCount);
+				vector<State> result = executeLimitedDepthSearch(successors[i], goalState, visitedStates, limit - 1, path, nodeCount);
 				if (!result.empty())
 				{
 					delete [] successors;
 					return result;
 				}
+				delete successors[i];
 			}
-		}
+		}	
 		return emptySet;
 		//printf("Size pieces are:\n ObjectSize: %li\n ReturnSize: %li\n", sizeof(Node**), sizeof(node->successors));
 	}
@@ -602,7 +609,7 @@ vector<State> executeIterativeDepthSearch(Node *node, State goalState, vector<St
 {
 	vector<State> solution;
 	int limitCount = 0;
-	while (solution.empty())
+	while (solution.empty() && limitCount < LIMITMAX)
 	{
 		solution = executeLimitedDepthSearch(node, goalState, new vector<State>(), limitCount, path, nodeCount);
 		limitCount++;
@@ -659,6 +666,7 @@ vector<State> executeAStarSearch(Node *node, State goalState, int *nodeCount)
 			}*/
 			currentNode = frontierQ.top();
 			frontierQ.pop();
+			*nodeCount = *nodeCount + 1;
 
 			//currentNode->sortValue = aStarHeuristic(currentNode->state, goalState);
 
@@ -704,6 +712,7 @@ void writeSolutionToOutput(vector<State> solutionPath, int *nodesExpanded, char 
 		delete[] string;
 	}
 	openfile << "Nodes Expanded: " << *nodesExpanded << endl;
+	openfile << "Nodes in Solution: " << solutionPath.size() << endl;
 
 	return;
 }
