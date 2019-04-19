@@ -211,6 +211,9 @@ State loadStateFromFile(char *stateFile)
 	cout << "Right Wolf Count: " << state.rightWolfCount << endl;
 	cout << "Right boat Count: " << state.rightBoatCount << endl;
 
+	cout << "Boat Chicken Count: " << state.boatChickenCount << endl;
+	cout << "Boat Wolf Count: " << state.boatWolfCount << endl;
+
 	return state;
 }
 
@@ -326,7 +329,7 @@ bool checkValidAction(State state, Action action)
 
 State applyAction(State state, Action action)
 {
- cout << "Parent stat: " << endl << stateToString(state) << endl;
+ cout << "Parent state: " << endl << stateToString(state) << endl;
 	State returnState;
 	switch (action)
 	{
@@ -351,11 +354,15 @@ State applyAction(State state, Action action)
 		state.rightBoatCount++;
 		while (state.boatWolfCount != 0)
 		{
+		if(state.boatWolfCount > 2)
+				cout << "What the fuck!!!" << endl;
 			state.boatWolfCount--;
 			state.rightWolfCount++;
 		}
 		while (state.boatChickenCount != 0)
 		{
+			if(state.boatChickenCount > 2)
+				cout << "What the fuck" << endl;
 			state.boatChickenCount--;
 			state.rightChickenCount++;
 			returnState = state;
@@ -426,7 +433,7 @@ Node *getSingleStateSuccessor(State state, Action action)
 {
 	if (checkValidAction(state, action))
 	{
-		//cout << "moveLeft valid" << endl;
+		cout << "Child for action: " << action << endl;
 		Node *successorNode = new Node();
 		successorNode->state = applyAction(state, action);
 		cout << "Got new successor: " << stateToString(successorNode->state) << endl;
@@ -466,10 +473,6 @@ vector<State> executeBreadthSearch(Node *node, State goalState, int *nodeCount)
 	if (checkSameState(initialNodeState, goalState))
 	{
 		return traceParentPath(node);
-	}
-	else if (checkInClosedSet(initialNodeState, &visitedStates))
-	{
-		return emptySet;
 	}
 	else
 	{
