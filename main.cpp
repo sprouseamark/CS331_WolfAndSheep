@@ -474,6 +474,8 @@ vector<State> executeBreadthSearch(Node *node, State goalState, int *nodeCount)
 	{
 		while (true)
 		{
+			//cout << "Frontier size: " << frontier.size() << endl;
+			cout << "Visited States size: " << visitedStates.size() << endl;
 			if (frontier.empty())
 			{
 				return emptySet;
@@ -634,7 +636,7 @@ vector<State> executeAStarSearch(Node *node, State goalState, int *nodeCount)
 	MyQueue<Node*, vector<Node*>, aStarCompareDistance> frontierQ;
 	State initialNodeState = node->state;
 	node->parent = NULL;
-	node->sortValue = aStarHeuristic(node->state, goalState);
+	node->sortValue = aStarHeuristic(node->state, goalState) + node->depth;
 	//visitedStates.push_back(node->state);
 	frontierQ.push(node);
 	Node* currentNode;
@@ -658,7 +660,7 @@ vector<State> executeAStarSearch(Node *node, State goalState, int *nodeCount)
 			currentNode = frontierQ.top();
 			frontierQ.pop();
 
-			currentNode->sortValue = aStarHeuristic(currentNode->state, goalState);
+			//currentNode->sortValue = aStarHeuristic(currentNode->state, goalState);
 
 			Node **successors = new Node *[ACTIONCOUNT];
 
@@ -669,6 +671,8 @@ vector<State> executeAStarSearch(Node *node, State goalState, int *nodeCount)
 				if (successors[i] != NULL)
 				{
 					successors[i]->parent = currentNode;
+					assignDepth(successors[i]);
+					successors[i]->sortValue = aStarHeuristic(successors[i]->state, goalState) + successors[i]->depth;
 					visitedStates.push_back(currentNode->state);
 					if (!checkInClosedSet(successors[i]->state, &visitedStates) && !checkIfInPriorityQueue(frontierQ, successors[i]))
 					{
