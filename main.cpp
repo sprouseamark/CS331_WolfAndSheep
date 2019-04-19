@@ -13,7 +13,7 @@
 using namespace std;
 
 #define ACTIONCOUNT 7
-#define LIMITMAX 10000000
+#define LIMITMAX 1000
 
 enum Action {
 	moveLeft = 0,
@@ -625,9 +625,8 @@ int aStarHeuristic(State state, State goalState)
 	sum += abs(state.leftBoatCount - goalState.leftBoatCount);
 	sum += abs(state.leftChickenCount - goalState.leftChickenCount);
 	sum += abs(state.leftWolfCount - goalState.leftWolfCount);
-	sum += abs(state.rightBoatCount - goalState.rightBoatCount);
-	sum += abs(state.rightChickenCount - goalState.rightChickenCount);
-	sum += abs(state.rightWolfCount - goalState.rightWolfCount);
+	
+	sum = sum / 2;
 
 	return sum;
 }
@@ -764,7 +763,12 @@ void findSolution(Node *solutionTree, State goalState, char *searchMode, char *o
 			delete[] string;
 		}
 	}
-	writeSolutionToOutput(solutionPath, nodesExpanded, outputFile);
+	if(solutionPath.size() == 0){
+		cout << "No solution found." << endl;
+	}
+	else{
+		writeSolutionToOutput(solutionPath, nodesExpanded, outputFile);
+	}
 
 	return;
 }
