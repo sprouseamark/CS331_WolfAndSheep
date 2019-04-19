@@ -95,8 +95,9 @@ vector<State> traceParentPath (Node* goalNode){
 
 char* stateToString(State state){
 	char* output = new char[100];
-	sprintf(output, "%d,%d,%d\n%d,%d,%d\n\n", state.leftChickenCount, state.leftWolfCount, state.leftBoatCount,
-		state.rightChickenCount, state.rightWolfCount, state.rightBoatCount);
+	sprintf(output, "%d,%d,%d\n%d,%d,%d\n%d,%d\n\n", state.leftChickenCount, state.leftWolfCount, state.leftBoatCount,
+		state.rightChickenCount, state.rightWolfCount, state.rightBoatCount,
+		state.boatChickenCount, state.boatWolfCount);
 	return output;
 }
 
@@ -329,114 +330,109 @@ bool checkValidAction(State state, Action action)
 
 State applyAction(State state, Action action)
 {
- cout << "Parent state: " << endl << stateToString(state) << endl;
 	State returnState;
 	switch (action)
 	{
-	case moveLeft:
+		case moveLeft:
 
-		state.leftBoatCount++;
-		state.rightBoatCount--;
-		while (state.boatWolfCount != 0)
-		{
-			state.boatWolfCount--;
-			state.leftWolfCount++;
-		}
-		while (state.boatChickenCount != 0)
-		{
-			state.boatChickenCount--;
-			state.leftChickenCount++;
-		}
-		returnState = state;
-		break;
-	case moveRight:
-		state.leftBoatCount--;
-		state.rightBoatCount++;
-		while (state.boatWolfCount != 0)
-		{
-		if(state.boatWolfCount > 2)
-				cout << "What the fuck!!!" << endl;
-			state.boatWolfCount--;
-			state.rightWolfCount++;
-		}
-		while (state.boatChickenCount != 0)
-		{
-			if(state.boatChickenCount > 2)
-				cout << "What the fuck" << endl;
-			state.boatChickenCount--;
-			state.rightChickenCount++;
+			state.leftBoatCount++;
+			state.rightBoatCount--;
+			while (state.boatWolfCount != 0)
+			{
+				state.boatWolfCount--;
+				state.leftWolfCount++;
+			}
+			while (state.boatChickenCount != 0)
+			{
+				state.boatChickenCount--;
+				state.leftChickenCount++;
+			}
 			returnState = state;
-		}
-		break;
-	case loadChicken:
-		if (state.leftBoatCount == 1)
-			state.leftChickenCount--;
-		else
-			state.rightChickenCount--;
-		state.boatChickenCount++;
-		returnState = state;
-		break;
-	case loadDoubleChicken:
-		if (state.leftBoatCount == 1)
-			state.leftChickenCount -= 2;
-		else
-			state.rightChickenCount -= 2;
-		state.boatChickenCount += 2;
-		returnState = state;
-		break;
-	case loadWolf:
-		if (state.leftBoatCount == 1)
-			state.leftWolfCount--;
-		else
-			state.rightWolfCount--;
-		state.boatWolfCount++;
-		returnState = state;
-		break;
-	case loadDoubleWolf:
-		if (state.leftBoatCount == 1)
-			state.leftWolfCount -= 2;
-		else
-			state.rightWolfCount -= 2;
-		state.boatWolfCount += 2;
-		returnState = state;
-		break;
-	case loadChickenWolf:
-		if (state.leftBoatCount == 1)
-		{
-			state.leftWolfCount--;
-			state.leftChickenCount--;
-		}
-		else
-		{
-			state.rightWolfCount--;
-			state.rightChickenCount--;
-		}
-		state.boatWolfCount++;
-		state.boatChickenCount++;
-		returnState = state;
-		break;
-	default:
-		returnState = state;
-		break;
+			break;
+		case moveRight:
+			state.leftBoatCount--;
+			state.rightBoatCount++;
+			while (state.boatWolfCount != 0)
+			{
+				state.boatWolfCount--;
+				state.rightWolfCount++;
+			}
+			while (state.boatChickenCount != 0)
+			{
+				state.boatChickenCount--;
+				state.rightChickenCount++;
+			}
+			returnState = state;
+			break;
+		case loadChicken:
+			if (state.leftBoatCount == 1)
+				state.leftChickenCount--;
+			else
+				state.rightChickenCount--;
+			state.boatChickenCount++;
+			returnState = state;
+			break;
+		case loadDoubleChicken:
+			if (state.leftBoatCount == 1)
+				state.leftChickenCount -= 2;
+			else
+				state.rightChickenCount -= 2;
+			state.boatChickenCount += 2;
+			returnState = state;
+			break;
+		case loadWolf:
+			if (state.leftBoatCount == 1)
+				state.leftWolfCount--;
+			else
+				state.rightWolfCount--;
+			state.boatWolfCount++;
+			returnState = state;
+			break;
+		case loadDoubleWolf:
+			if (state.leftBoatCount == 1)
+				state.leftWolfCount -= 2;
+			else
+				state.rightWolfCount -= 2;
+			state.boatWolfCount += 2;
+			returnState = state;
+			break;
+		case loadChickenWolf:
+			if (state.leftBoatCount == 1)
+			{
+				state.leftWolfCount--;
+				state.leftChickenCount--;
+			}
+			else
+			{
+				state.rightWolfCount--;
+				state.rightChickenCount--;
+			}
+			state.boatWolfCount++;
+			state.boatChickenCount++;
+			returnState = state;
+			break;
+		default:
+			returnState = state;
+			break;
 
 		if (returnState.leftChickenCount < returnState.leftWolfCount || returnState.rightChickenCount < returnState.rightWolfCount){
 			returnState = initStateObj();
-			cout << "here" << endl;
 		}
 		//printf("New state rightChickenCount: %d\n", returnState.rightChickenCount);
-
-		return returnState;
 	}
+	return returnState;
 }
 
 Node *getSingleStateSuccessor(State state, Action action)
 {
 	if (checkValidAction(state, action))
 	{
-		cout << "Child for action: " << action << endl;
+		//cout << "Child for action: " << action << endl;
 		Node *successorNode = new Node();
 		successorNode->state = applyAction(state, action);
-		cout << "Got new successor: " << stateToString(successorNode->state) << endl;
+		State temp = successorNode->state;
+		//cout << "Got new successor: " << endl << stateToString(successorNode->state) << endl;
+
 		return successorNode;
 	}
 	else
@@ -479,7 +475,9 @@ vector<State> executeBreadthSearch(Node *node, State goalState, int *nodeCount)
 		while (true)
 		{
 			if (frontier.empty())
+			{
 				return emptySet;
+			}
 
 			currentNode = frontier.front();
 			frontier.erase(frontier.begin());
@@ -489,7 +487,6 @@ vector<State> executeBreadthSearch(Node *node, State goalState, int *nodeCount)
 
 			for (int i = 0; i < ACTIONCOUNT; i++)
 			{
-				
 				successors[i] = getSingleStateSuccessor(currentNode->state, static_cast<Action>(i));
 				if (successors[i] != NULL)
 				{
@@ -498,7 +495,7 @@ vector<State> executeBreadthSearch(Node *node, State goalState, int *nodeCount)
 					{
 						if (checkSameState(successors[i]->state, goalState))
 						{
-							
+							cout << "Solution found" << endl;
 							return traceParentPath(successors[i]);
 						}
 						else
@@ -506,13 +503,8 @@ vector<State> executeBreadthSearch(Node *node, State goalState, int *nodeCount)
 							frontier.push_back(successors[i]);
 						}
 					}
-
-					//delete successors[i];
 				}
 			}
-
-			//delete[] successors;
-
 		}
 	}
 }
@@ -621,14 +613,12 @@ int aStarHeuristic(State state, State goalState)
 	int sum = 0;
 	//cout << "Left boat count " << state.leftBoatCount << endl;
 	//cout << "Left goal boat count " << goalState.leftBoatCount << endl;
-	//sum += abs(state.leftBoatCount - goalState.leftBoatCount);
-	/*sum += abs(state.leftChickenCount - goalState.leftChickenCount);
+	sum += abs(state.leftBoatCount - goalState.leftBoatCount);
+	sum += abs(state.leftChickenCount - goalState.leftChickenCount);
 	sum += abs(state.leftWolfCount - goalState.leftWolfCount);
 	sum += abs(state.rightBoatCount - goalState.rightBoatCount);
 	sum += abs(state.rightChickenCount - goalState.rightChickenCount);
-	sum += abs(state.rightWolfCount - goalState.rightWolfCount);*/
-
-	cout << sum << endl;
+	sum += abs(state.rightWolfCount - goalState.rightWolfCount);
 
 	return sum;
 }
@@ -654,18 +644,12 @@ vector<State> executeAStarSearch(Node *node, State goalState, int *nodeCount)
 	{
 		return traceParentPath(node);
 	}
-	else if (checkInClosedSet(initialNodeState, &visitedStates))
-	{
-
-		return emptySet;
-	}
 	else
 	{
 		while (true)
 		{
 			if (frontierQ.empty())
 			{
-				cout << "q is empty" << endl;
 				return emptySet;
 			}
 			/*else{
@@ -686,8 +670,6 @@ vector<State> executeAStarSearch(Node *node, State goalState, int *nodeCount)
 				{
 					successors[i]->parent = currentNode;
 					visitedStates.push_back(currentNode->state);
-					//cout << stateToString(successors[i]->state) << endl;
-					cout << "HELLOTHERE" << endl;
 					if (!checkInClosedSet(successors[i]->state, &visitedStates) && !checkIfInPriorityQueue(frontierQ, successors[i]))
 					{
 						if (checkSameState(successors[i]->state, goalState))
@@ -797,7 +779,6 @@ int main(int args, char **argv)
 	SolutionTree->state = initialState;
 
 	findSolution(SolutionTree, goalState, argv[3], argv[4]);
-	cout << "it finished" << endl;
 
 	return 0;
 }
