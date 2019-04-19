@@ -1,3 +1,7 @@
 Team members: 
 Bailey Singleton, singletb
 Mark Sprouse, sprousem
+
+Please compile with the -std=c++11 flag!
+
+g++ -std=c++11 main.cpp
